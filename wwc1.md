@@ -55,12 +55,12 @@
 3 4 5 6 7
 样例输出
 Case:1
-000 red iceman 1 born with strength 5,1 iceman in red headquarter
-000 blue lion 1 born with strength 6,1 lion in blue headquarter
-001 red lion 2 born with strength 6,1 lion in red headquarter
-001 blue dragon 2 born with strength 3,1 dragon in blue headquarter
-002 red wolf 3 born with strength 7,1 wolf in red headquarter
-002 blue ninja 3 born with strength 4,1 ninja in blue headquarter
-003 red headquarter stops making warriors
-003 blue iceman 4 born with strength 5,1 iceman in blue headquarter
-004 blue headquarter stops making warriors
+000 red iceman 1 born with strength 5,1 iceman in red headquarter  
+000 blue lion 1 born with strength 6,1 lion in blue headquarter  
+001 red lion 2 born with strength 6,1 lion in red headquarter  
+001 blue dragon 2 born with strength 3,1 dragon in blue headquarter  
+002 red wolf 3 born with strength 7,1 wolf in red headquarter  
+002 blue ninja 3 born with strength 4,1 ninja in blue headquarter  
+003 red headquarter stops making warriors  
+003 blue iceman 4 born with strength 5,1 iceman in blue headquarter  
+004 blue headquarter stops making warriors  
