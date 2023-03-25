@@ -18,14 +18,16 @@ enum HeadquarterStategy{red=0,blue=1};
 enum BattleResults{bothDead=0,redWon=1,blueWon=2,bothAlive=3};
 const std::string WeaponName[3]{"sword", "bomb","arrow"};
 const std::string WarriorName[5]{"dragon","ninja","iceman","lion","wolf"};
+const std::string HeadquarterName[2]{"red","blue"};
 int WarriorHp[5]{};
 int WarriorATK[5]{};
 // 红方顺序:3,4,5,2,1;蓝方顺序:4,1,2,3,5
 constexpr WarriorType statgies[2][5]{{iceman,lion,wolf,ninja,dragon},{lion,dragon,ninja,iceman,wolf}};
-int RoyaltyDeclineRate{};
+int LoyaltyDeclineRate{};
 int HQPosition[2]{};
 int MaxTime{};
 int HQHealth{};
+int CitySum{};
 
 
 
@@ -53,6 +55,12 @@ public:
 
     friend bool comparator_tidy(Weapon const& lhs,Weapon const& rhs);
     friend bool comparator_loot(Weapon const& lhs,Weapon const& rhs);
+    friend bool operator==(Weapon const& lhs,Weapon const& rhs){
+        if((lhs._weapontype==rhs._weapontype)&&(lhs._durability==rhs._durability)){
+            return true;
+        }
+        return false;
+    }
     //for debug
     friend std::ostream& operator<<(std::ostream& os,Weapon const& dhis){
         os<<dhis._weapontype<<std::endl;
@@ -166,25 +174,33 @@ public:
     std::vector<Weapon> const& weapons(){return _weapons;}
     int hp() const& {return _hp;}
     WarriorType const& warriorType(){return _warriortype;}
-    //无意义多态：为Ninja设计//
+    //ninja should override this
     inline virtual bool Hurt_oneself(){return 1;}
-    //无意义多态：为Iceman&&Lion预留//
-    virtual void March(){
+    //iceman and lion should override this
+    virtual void March(int const& time_){
         _position+=(_HQ==red?1:-1);
-        /*march words*/
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
+                 <<_warrior_id<<" marched to city "<<_position<<" with "
+                 <<_hp<<" elements and force "<<_atk<<std::endl;
+        return;
     }
-    virtual void Reach_HQ(){
+    virtual void Reach_HQ(int const& time_){
         _position+=(_HQ==red?1:-1);
-        /*reach words*/
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
+                 <<_warrior_id<<" reached "<<HeadquarterName[1-_HQ]<<" headquarter with "
+                 <<_hp<<" elements and force "<<_atk<<std::endl;
     }
-    //无意义多态：为lion预留
-    virtual void Runaway(){}
-    virtual void PreFight_Loot(Warrior& enemy){}
+    //lion should override this
+    virtual bool Runaway(int const& time_){}
+    virtual void PreFight_Loot(Warrior& enemy,int const& time_){}
     virtual void Prepare_For_Fight(){
         _settle_inventory(comparator_tidy);
         _weapon_roll=0;
         //undone
     }
+    //TODO : 将_weapon_roll重构成iter
     virtual bool Attack(Warrior& enemy){
         if(_weapons.size()==0){
             return false;//failed
@@ -212,7 +228,8 @@ public:
         return true;//success
     } 
     //抢夺对方背包，wolf或战后用
-    virtual void Loot(Warrior& enemy){
+    virtual bool Loot(Warrior& enemy){
+        bool has_looted{false};
         _settle_inventory(comparator_tidy);
         enemy._settle_inventory(comparator_loot);
         for(auto iter=enemy._weapons.begin();iter!=enemy._weapons.end();){
@@ -222,11 +239,22 @@ public:
             ++_weapon_cnt[iter->weapontype()];
             _weapons.push_back(*iter);
             iter=enemy._weapons.erase(iter);
+            has_looted=true;
         }
+        return has_looted;
     }
-    virtual void Yell(){}
-    virtual void Report(){
-        /*reports weapons and hp*/
+    virtual void Yell(int const& time_){}
+    virtual void Report(int const& time_){
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":55 ";
+        ShowBasic();
+        std::cout<<" has "<<_weapon_cnt[sword]<<' '<<WeaponName[sword]<<' '
+                 <<_weapon_cnt[bomb]<<' '<<WeaponName[bomb]<<' '
+                 <<_weapon_cnt[arrow]<<' '<<WeaponName[arrow]<<' '
+                 <<" and "<<_hp<<" elements"<<std::endl;
+    }
+    virtual void ShowBasic(){
+        std::cout<<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
+                 <<_warrior_id;
     }
 };
 
@@ -238,8 +266,10 @@ public:
         _initial_weapon(wid%3);
     }
     ~Dragon(){}
-    void Yell(){
-        /*dragon yells*/
+    void Yell(int const& time_){
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":40 ";
+        ShowBasic();
+        std::cout<<" yelled in city "<<_position<<std::endl;
     }
 };
 
@@ -261,33 +291,46 @@ public:
         _initial_weapon(wid%3);
     }
     ~Iceman(){}
-    void March(){
+    void March(int const& time_){
         _position+=(_HQ==red?1:-1);
         _hp*=0.9;
-        /*march words*/
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
+                 <<_warrior_id<<" marched to city "<<_position<<" with "
+                 <<_hp<<" elements and force "<<_atk<<std::endl;
+        return;
     }
 };
 
 class Lion:public Warrior{
 private:
-    int _royalty;
+    int _loyalty;
 public:
     Lion(int pos,int wid,HeadquarterStategy HQ_,int HQhealth):Warrior(wid,WarriorHp[lion],WarriorATK[lion],pos,lion,HQ_),
-                                                            _royalty(HQhealth)
+                                                            _loyalty(HQhealth)
     {
         _weapons.clear();
         _initial_weapon(wid%3);
     }
     ~Lion(){}
-    void March(){
+    void March(int const& time_){
         _position+=(_HQ==red?1:-1);
-        _royalty-=RoyaltyDeclineRate;
-        /*march words*/
+        _loyalty-=LoyaltyDeclineRate;
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
+                 <<_warrior_id<<" marched to city "<<_position<<" with "
+                 <<_hp<<" elements and force "<<_atk<<std::endl;
+        return;
     }
-    void Runaway(){
-        if(_position!=HQPosition[1-_HQ]){
-            /*lion runs away*/
+    bool Runaway(int const& time_){
+        if((_position!=HQPosition[1-_HQ])&&(_loyalty<=0)){
+            std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":05 "
+             <<HeadquarterName[_HQ]<<' '
+             <<WarriorName[_warriortype]<<' '
+             <<_warrior_id<<" ran away"<<std::endl;
+            return true;
         }
+        return false;
     }
 };
 
@@ -297,9 +340,24 @@ public:
         _weapons.clear();
     }
     ~Wolf()=default;
-    void PreFight_Loot(Warrior& enemy){
-        if(enemy.warriorType()==wolf) return;
-        Loot(enemy);
+    void PreFight_Loot(Warrior& enemy,int const& time_){
+        if(enemy.warriorType()==wolf){
+            return;
+        } 
+        int weapon_cnt_bak[3] {_weapon_cnt[sword],_weapon_cnt[bomb],_weapon_cnt[arrow]};
+        if(Loot(enemy)){
+            std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":35 ";
+            ShowBasic(); 
+            std::cout<<" took ";
+            for(int i=0;i<3;++i){
+                if(_weapon_cnt[i]-weapon_cnt_bak[i]){
+                    std::cout<<_weapon_cnt[i]-weapon_cnt_bak[i]<<' '<<WeaponName[i];
+                }
+            }
+            std::cout<<" from ";
+            enemy.ShowBasic();
+            std::cout<<" in city "<<_position<<std::endl;
+        }
         return;
     }
 };
@@ -326,22 +384,21 @@ public:
         _warriors_here.clear();
     }
     std::vector<Warrior*>& warriors_here(){return _warriors_here;}
-    virtual void Warrior_March(){
+    virtual void Warrior_March(City* other,HeadquarterStategy direction){
         //恶心死了：输出和事件应当不同步
-        (this+1)->_warriors_here[red]=_warriors_here[red];
-        (this-1)->_warriors_here[blue]=_warriors_here[blue];
-        _warriors_here[red]=nullptr;
-        _warriors_here[blue]=nullptr;
+        other->warriors_here()[direction]=_warriors_here[direction];
+        _warriors_here[direction]=nullptr;
     }
-    virtual void Warrior_Arrive(){
+    virtual void Warrior_Arrive(int const& time_){
         if(_warriors_here[red]!=nullptr)
-            _warriors_here[red]->March();
+            _warriors_here[red]->March(time_);
         if(_warriors_here[blue]!=nullptr)
-            _warriors_here[blue]->March();
+            _warriors_here[blue]->March(time_);
     }
-    virtual bool Give_Birth(){}
-    virtual void Battle(){}
-    virtual void Report(){}
+    virtual bool Give_Birth(int const& time_){}
+    virtual void Battle(int const& time_){}
+    virtual void Report(int const& time_){}
+    virtual bool Is_Overtaken(){}
 };
 
 
@@ -366,30 +423,36 @@ public:
         }
         _own_warriors.clear();  
     }
-    bool Give_Birth();
-    void Warrior_March(){
-        (this+(_stategy==red?1:-1))->_warriors_here[_stategy]=_warriors_here[_stategy];
-        _warriors_here[_stategy]=nullptr;
+    bool Give_Birth(int const& time_);
+    bool Is_Overtaken(){return _is_overtaken;}
+    void Warrior_March(City* other,HeadquarterStategy direction){
+        //fault
+        other->warriors_here()[direction]=_warriors_here[direction];
+        _warriors_here[direction]=nullptr;
+        //
     }
-    void Warrior_Arrive(){
+    void Warrior_Arrive(int const& time_){
         if(_warriors_here[1-_stategy]!=nullptr){
-            _warriors_here[1-_stategy]->Reach_HQ();
+            _warriors_here[1-_stategy]->Reach_HQ(time_);
+            std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
+                     <<HeadquarterName[_stategy]<<" headquarter was taken"<<std::endl;
             _is_overtaken=true;
         }
     }
-    void Report(){
-        /*reports hp*/
+    void Report(int const& time_){
+        std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":50 "
+                 <<_health<<" elements in "<<HeadquarterName[_stategy]<<" headquarter"<<std::endl;
     }
 };
 
-bool Headquarter::Give_Birth(){
+bool Headquarter::Give_Birth(int const& time_){
     if(_health<WarriorHp[statgies[_stategy][_warrior_roll]]){
         return false;//failed
     }
     _health-=WarriorHp[statgies[_stategy][_warrior_roll]];
     ++_warrior_sum;
     Warrior* newWarrior;
-    switch(_warrior_roll){
+    switch(statgies[_stategy][_warrior_roll]){
         /*makes new warriors by type*/
         case dragon:{
             newWarrior = new Dragon(HQPosition[_stategy],_warrior_sum,_stategy);
@@ -416,6 +479,15 @@ bool Headquarter::Give_Birth(){
     _own_warriors.push_back(newWarrior);
     _warriors_here[_stategy]=newWarrior;
     _warrior_roll=(_warrior_roll+1)%5;
+    //output
+    std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":00 "
+             <<HeadquarterName[_stategy]<<' '
+             <<WarriorName[newWarrior->warriorType()]<<' '
+             <<_warrior_sum<<" born"<<std::endl;
+    //far from elegant lol
+    if(newWarrior->warriorType()==lion){
+        std::cout<<"Its loyalty is "<<_health<<std::endl;
+    }
     return true;//success
 }
 
@@ -436,7 +508,7 @@ private:
             return bothAlive;
         }
     }
-    BattleResults _battle(){
+    BattleResults _battle(int const& time_){
         _warriors_here[red]->Prepare_For_Fight();
         _warriors_here[blue]->Prepare_For_Fight();
         BattleResults battle_result{};
@@ -486,11 +558,11 @@ private:
         }
         if(battle_result==redWon){
             _warriors_here[red]->Loot(*_warriors_here[blue]);
-            _warriors_here[red]->Yell();
+            _warriors_here[red]->Yell(time_);
         }
         if(battle_result==blueWon){
             _warriors_here[blue]->Loot(*_warriors_here[red]);
-            _warriors_here[blue]->Yell();
+            _warriors_here[blue]->Yell(time_);
         }
         return battle_result;
     }
@@ -498,38 +570,65 @@ private:
 public:
     BattleCity(int city_pos):City(city_pos){}
     ~BattleCity(){}
-    void Battle(){
-        if(_warriors_here[red]!=nullptr&&_warriors_here[blue]!=nullptr){
-            BattleResults res=_battle();
-            switch(res){
-                case redWon:{
-                    /*battle result words*/
-                    _warriors_here[blue]=nullptr;
-                    break;
-                }
-                case blueWon:{
-                    /*battle result words*/
-                    _warriors_here[red]=nullptr;
-                    break;
-                }
-                case bothDead:{
-                    /*battle result words*/
-                    _warriors_here[red]=nullptr;
-                    _warriors_here[blue]=nullptr;
-                    break;
-                }
-                case bothAlive:{
-                    /*battle result words*/
-                    break;
-                }
+    void Battle(int const& time_);
+};
+
+void BattleCity::Battle(int const& time_){
+    if(_warriors_here[red]!=nullptr&&_warriors_here[blue]!=nullptr){
+        BattleResults res=_battle(time_);
+        switch(res){
+            case redWon:{
+                std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":40 ";
+                _warriors_here[red]->ShowBasic();
+                std::cout<<" killed ";
+                _warriors_here[blue]->ShowBasic();
+                std::cout<<" in city "<<_city_pos<<" remaining "<<_warriors_here[red]->hp()
+                         <<" elements"<<std::endl;
+
+                _warriors_here[blue]=nullptr;
+                break;
+            }
+            case blueWon:{
+                std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":40 ";
+                _warriors_here[blue]->ShowBasic();
+                std::cout<<" killed ";
+                _warriors_here[red]->ShowBasic();
+                std::cout<<" in city "<<_city_pos<<" remaining "<<_warriors_here[blue]->hp()
+                         <<" elements"<<std::endl;
+                             
+                _warriors_here[red]=nullptr;
+                break;
+            }
+            case bothDead:{
+                std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":40 both ";
+                _warriors_here[red]->ShowBasic();
+                std::cout<<" and ";
+                _warriors_here[blue]->ShowBasic();
+                std::cout<<" died in city "<<_city_pos<<std::endl;
+
+                _warriors_here[red]=nullptr;
+                _warriors_here[blue]=nullptr;
+                break;
+            }
+            case bothAlive:{
+                std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":40 both ";
+                _warriors_here[red]->ShowBasic();
+                std::cout<<" and ";
+                _warriors_here[blue]->ShowBasic();
+                std::cout<<" were alive in city "<<_city_pos<<std::endl;
+
+                break;
             }
         }
     }
-};
+}
+
+
 
 ////////////////////////////////
 ////         games          ////
 ////////////////////////////////
+
 
 class Game{
 private:
@@ -552,74 +651,108 @@ public:
         }
         _cities.clear();
     }
-    void PlayGame(){
-        //一个小时的循环
-        while(_time<=MaxTime){
-            /*???:00 words*/
-            _cities[0]->Give_Birth();
-            _cities[_city_sum-1]->Give_Birth();
-            _time+=5;
-            if(_time>MaxTime)break;
-
-            /*???:05 words*/
-            for(auto iter = _cities.begin();iter != _cities.end();++iter){
-                (*iter)->warriors_here()[red]->Runaway();
-                (*iter)->warriors_here()[blue]->Runaway();
-            }
-            _time+=5;
-            if(_time>MaxTime)break;
-
-            /*???:10 words*/
-            for(auto iter = _cities.begin();iter != _cities.end();++iter){
-                (*iter)->Warrior_March();
-                (*iter)->Warrior_Arrive();
-            }
-            _time+=25;
-            if(_time>MaxTime)break;
-
-            /*???:35 words*/
-            for(auto iter = _cities.begin()+1;iter != _cities.end()-1;++iter){
-                if((*iter)->warriors_here()[red]!=nullptr&&(*iter)->warriors_here()[blue]!=nullptr){
-                    (*iter)->warriors_here()[red]->PreFight_Loot(*(*iter)->warriors_here()[blue]);
-                    (*iter)->warriors_here()[blue]->PreFight_Loot(*(*iter)->warriors_here()[red]);
-                }
-            }
-            _time+=5;
-            if(_time>MaxTime)break;
-
-            /*???:40 words*/
-            for(auto iter = _cities.begin()+1;iter != _cities.end()-1;++iter){
-                (*iter)->Battle();
-            }
-            _time+=10;
-            if(_time>MaxTime)break;
-
-            /*???:50 words*/
-            _cities[0]->Report();
-            _cities[_city_sum-1]->Report();
-            _time+=5;
-            if(_time>MaxTime)break;
-
-            /*???:55 words*/
-            for(auto iter = _cities.begin()+1;iter != _cities.end()-1;++iter){
-                if((*iter)->warriors_here()[red]!=nullptr){
-                    (*iter)->warriors_here()[red]->Report();
-                }
-                if((*iter)->warriors_here()[blue]!=nullptr){
-                    (*iter)->warriors_here()[blue]->Report();
-                }
-            }
-            _time+=5;
-            if(_time>MaxTime)break;
-        }
-    }
+    void PlayGame();
 };
 
+void Game::PlayGame(){
+    //一个小时的循环
+    while(_time<=MaxTime){
+        /*???:00 words*/
+        _cities[0]->Give_Birth(_time);
+        _cities[_city_sum-1]->Give_Birth(_time);
+        _time+=5;
+        if(_time>MaxTime)break;
+
+        /*???:05 words*/
+        for(auto iter = _cities.begin();iter != _cities.end();++iter){
+            if((*iter)->warriors_here()[red]!=nullptr){
+                if((*iter)->warriors_here()[red]->Runaway(_time)){
+                    (*iter)->warriors_here()[red]=nullptr;
+                }
+            }
+            if((*iter)->warriors_here()[blue]!=nullptr){
+                if((*iter)->warriors_here()[blue]->Runaway(_time)){
+                    (*iter)->warriors_here()[blue]=nullptr;
+                }
+            }
+        }
+        _time+=5;
+        if(_time>MaxTime)break;
+
+        /*???:10 words*/
+        for(int i=_city_sum-2;i>=0;--i){
+            _cities[i]->Warrior_March(_cities[i+1],red);
+        }
+        for(int i=1;i<_city_sum;++i){
+            _cities[i]->Warrior_March(_cities[i-1],blue);
+        }
+        for(auto iter = _cities.begin();iter != _cities.end();++iter){
+            (*iter)->Warrior_Arrive(_time);
+        }
+        if(_cities[0]->Is_Overtaken()||_cities[_city_sum-1]->Is_Overtaken()){
+            break;
+        }
+        _time+=25;
+        if(_time>MaxTime)break;
+
+        /*???:35 words*/
+        for(auto iter = _cities.begin()+1;iter != _cities.end()-1;++iter){
+            if((*iter)->warriors_here()[red]!=nullptr&&(*iter)->warriors_here()[blue]!=nullptr){
+                (*iter)->warriors_here()[red]->PreFight_Loot(*(*iter)->warriors_here()[blue],_time);
+                (*iter)->warriors_here()[blue]->PreFight_Loot(*(*iter)->warriors_here()[red],_time);
+            }
+        }
+        _time+=5;
+        if(_time>MaxTime)break;
+
+        /*???:40 words*/
+        for(auto iter = _cities.begin()+1;iter != _cities.end()-1;++iter){
+            (*iter)->Battle(_time);
+        }
+        _time+=10;
+        if(_time>MaxTime)break;
+
+        /*???:50 words*/
+        _cities[0]->Report(_time);
+        _cities[_city_sum-1]->Report(_time);
+        _time+=5;
+        if(_time>MaxTime)break;
+
+        /*???:55 words*/
+        for(auto iter = _cities.begin()+1;iter != _cities.end()-1;++iter){
+            if((*iter)->warriors_here()[red]!=nullptr){
+                (*iter)->warriors_here()[red]->Report(_time);
+            }
+            if((*iter)->warriors_here()[blue]!=nullptr){
+                (*iter)->warriors_here()[blue]->Report(_time);
+            }
+        }
+        _time+=5;
+        if(_time>MaxTime)break;
+    }
+}
 
 
 
+////////////////////////////////
+////          main          ////
+////////////////////////////////
 
 
 int main(){
-    
+    int nCase{};
+    std::cin>>nCase;
+    for(int i=0;i<nCase;++i){
+        std::cout<<"Case "<<i+1<<std::endl;
+        std::cin>>HQHealth>>CitySum>>LoyaltyDeclineRate>>MaxTime;
+        for(int j=0;j<5;++j){
+            std::cin>>WarriorHp[j];
+        }
+        for(int j=0;j<5;++j){
+            std::cin>>WarriorATK[j];
+        }
+        Game game(CitySum);
+        game.PlayGame();
+    }
+    return 0;
 }
