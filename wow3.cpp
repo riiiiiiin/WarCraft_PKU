@@ -144,14 +144,14 @@ public:
 
 class Warrior{
 protected:
-    int _warrior_id;
-    int _hp;
+    int _warrior_id_;
+    int _hp_;
     int _atk;
-    int _position;
-    int _weapon_roll;
+    int _position_;
+    int _weapon_roll_;
     int _weapon_cnt[3];
-    int _hurt_oneself;
-    WarriorType _warriortype;
+    int _hurt_oneself_;
+    WarriorType _warriortype_;
     std::vector<Weapon*> _weapons;
     HeadquarterStategy _HQ;
     //整理背包，需传入comparator
@@ -207,8 +207,8 @@ protected:
     }
 
 public:
-    Warrior(int wid,int hp,int atk,int pos,WarriorType wtype,HeadquarterStategy HQ_,int hurt_oneself=1):_warrior_id(wid),_hp(hp),_atk(atk),
-                                                              _position(pos),_warriortype(wtype),_HQ(HQ_),_weapon_cnt{},_hurt_oneself(hurt_oneself){}
+    Warrior(int wid,int hp,int atk,int pos,WarriorType wtype,HeadquarterStategy HQ_,int hurt_oneself=1):_warrior_id_(wid),_hp_(hp),_atk(atk),
+                                                              _position_(pos),_warriortype_(wtype),_HQ(HQ_),_weapon_cnt{},_hurt_oneself_(hurt_oneself){}
     virtual ~Warrior(){
         for(auto iter=_weapons.begin();iter!=_weapons.end();++iter){
             
@@ -219,32 +219,32 @@ public:
     }
     int* weapon_cnt(){return _weapon_cnt;}
     HeadquarterStategy HQ() const& {return _HQ;}
-    bool Is_Alive() const {return _hp>0;}
+    bool Is_Alive() const {return _hp_>0;}
     std::vector<Weapon*> const& weapons(){return _weapons;}
-    int hp() const& {return _hp;}
-    WarriorType const& warriorType(){return _warriortype;}
+    int hp() const& {return _hp_;}
+    WarriorType const& warriorType(){return _warriortype_;}
     //iceman and lion should override this
     virtual void March(int const& time_){
-        _position+=(_HQ==red?1:-1);
+        _position_+=(_HQ==red?1:-1);
         std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
-                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
-                 <<_warrior_id<<" marched to city "<<_position<<" with "
-                 <<_hp<<" elements and force "<<_atk<<std::endl;
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype_]<<' '
+                 <<_warrior_id_<<" marched to city "<<_position_<<" with "
+                 <<_hp_<<" elements and force "<<_atk<<std::endl;
         return;
     }
     virtual void Reach_HQ(int const& time_){
-        _position+=(_HQ==red?1:-1);
+        _position_+=(_HQ==red?1:-1);
         std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
-                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
-                 <<_warrior_id<<" reached "<<HeadquarterName[1-_HQ]<<" headquarter with "
-                 <<_hp<<" elements and force "<<_atk<<std::endl;
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype_]<<' '
+                 <<_warrior_id_<<" reached "<<HeadquarterName[1-_HQ]<<" headquarter with "
+                 <<_hp_<<" elements and force "<<_atk<<std::endl;
     }
     //lion should override this
     virtual bool Runaway(int const& time_){return false;}
     virtual void PreFight_Loot(Warrior& enemy,int const& time_){}
     virtual void Prepare_For_Fight(){
         _settle_inventory(comparator_tidy);
-        _weapon_roll=0;
+        _weapon_roll_=0;
         //undone
     }
     virtual bool Attack(Warrior& enemy){
@@ -253,29 +253,29 @@ public:
         }
         //attack
         
-        std::pair<int,int> Dmg=_weapons[_weapon_roll]->attackDmg(_atk);
+        std::pair<int,int> Dmg=_weapons[_weapon_roll_]->attackDmg(_atk);
         
-        enemy._hp-=Dmg.first;
+        enemy._hp_-=Dmg.first;
         if(Dmg.second){
-            _hp-=Dmg.second*_hurt_oneself;
+            _hp_-=Dmg.second*_hurt_oneself_;
         }       
-        if(_weapons[_weapon_roll]->durability()>0){
-            --_weapons[_weapon_roll]->durability();
+        if(_weapons[_weapon_roll_]->durability()>0){
+            --_weapons[_weapon_roll_]->durability();
             
-            if(_weapons[_weapon_roll]->durability()==0){
-                --_weapon_cnt[_weapons[_weapon_roll]->weapontype()];
-                delete *(_weapons.begin()+_weapon_roll);
-                _weapons.erase(_weapons.begin()+_weapon_roll);
+            if(_weapons[_weapon_roll_]->durability()==0){
+                --_weapon_cnt[_weapons[_weapon_roll_]->weapontype()];
+                delete *(_weapons.begin()+_weapon_roll_);
+                _weapons.erase(_weapons.begin()+_weapon_roll_);
             }
             else{
-                ++_weapon_roll;
+                ++_weapon_roll_;
             }
         }
         else{
-            ++_weapon_roll;
+            ++_weapon_roll_;
         }
         if(_weapons.size()){
-            _weapon_roll%=_weapons.size(); 
+            _weapon_roll_%=_weapons.size(); 
         }
         return true;//success
     } 
@@ -307,11 +307,11 @@ public:
         std::cout<<" has "<<_weapon_cnt[sword]<<' '<<WeaponName[sword]<<' '
                  <<_weapon_cnt[bomb]<<' '<<WeaponName[bomb]<<' '
                  <<_weapon_cnt[arrow]<<' '<<WeaponName[arrow]<<' '
-                 <<"and "<<_hp<<" elements"<<std::endl;
+                 <<"and "<<_hp_<<" elements"<<std::endl;
     }
     virtual void ShowBasic(){
-        std::cout<<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
-                 <<_warrior_id;
+        std::cout<<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype_]<<' '
+                 <<_warrior_id_;
     }
 };
 
@@ -326,7 +326,7 @@ public:
     void Yell(int const& time_){
         std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":40 ";
         ShowBasic();
-        std::cout<<" yelled in city "<<_position<<std::endl;
+        std::cout<<" yelled in city "<<_position_<<std::endl;
     }
 };
 
@@ -348,21 +348,21 @@ public:
     }
     ~Iceman(){}
     void March(int const& time_){
-        _position+=(_HQ==red?1:-1);
-        _hp-=_hp/10;
+        _position_+=(_HQ==red?1:-1);
+        _hp_-=_hp_/10;
         std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
-                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
-                 <<_warrior_id<<" marched to city "<<_position<<" with "
-                 <<_hp<<" elements and force "<<_atk<<std::endl;
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype_]<<' '
+                 <<_warrior_id_<<" marched to city "<<_position_<<" with "
+                 <<_hp_<<" elements and force "<<_atk<<std::endl;
         return;
     }
     virtual void Reach_HQ(int const& time_){
-        _position+=(_HQ==red?1:-1);
-        _hp-=_hp/10;
+        _position_+=(_HQ==red?1:-1);
+        _hp_-=_hp_/10;
         std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
-                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
-                 <<_warrior_id<<" reached "<<HeadquarterName[1-_HQ]<<" headquarter with "
-                 <<_hp<<" elements and force "<<_atk<<std::endl;
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype_]<<' '
+                 <<_warrior_id_<<" reached "<<HeadquarterName[1-_HQ]<<" headquarter with "
+                 <<_hp_<<" elements and force "<<_atk<<std::endl;
     }
 };
 
@@ -378,20 +378,20 @@ public:
     }
     ~Lion(){}
     void March(int const& time_){
-        _position+=(_HQ==red?1:-1);
+        _position_+=(_HQ==red?1:-1);
         _loyalty-=LoyaltyDeclineRate;
         std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":10 "
-                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype]<<' '
-                 <<_warrior_id<<" marched to city "<<_position<<" with "
-                 <<_hp<<" elements and force "<<_atk<<std::endl;
+                 <<HeadquarterName[_HQ]<<' '<<WarriorName[_warriortype_]<<' '
+                 <<_warrior_id_<<" marched to city "<<_position_<<" with "
+                 <<_hp_<<" elements and force "<<_atk<<std::endl;
         return;
     }
     bool Runaway(int const& time_){
-        if((_position!=HQPosition[1-_HQ])&&(_loyalty<=0)){
+        if((_position_!=HQPosition[1-_HQ])&&(_loyalty<=0)){
             std::cout<<std::setw(3)<<std::setfill('0')<<time_/60<<std::setfill(' ')<<":05 "
              <<HeadquarterName[_HQ]<<' '
-             <<WarriorName[_warriortype]<<' '
-             <<_warrior_id<<" ran away"<<std::endl;
+             <<WarriorName[_warriortype_]<<' '
+             <<_warrior_id_<<" ran away"<<std::endl;
             return true;
         }
         return false;
@@ -420,7 +420,7 @@ public:
             }
             std::cout<<"from ";
             enemy.ShowBasic();
-            std::cout<<" in city "<<_position<<std::endl;
+            std::cout<<" in city "<<_position_<<std::endl;
         }
         return;
     }
